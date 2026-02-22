@@ -155,32 +155,82 @@ Keywords=num;lock;tray;led;
             print(f"Error setting Linux autostart: {e}")
 
 def is_app_menu_installed():
-    """Checks if the app is installed in the Linux application menu."""
-    if platform.system() != "Linux":
-        return False
-    app_menu_path = os.path.expanduser("~/.local/share/applications/numlocktray.desktop")
-    return os.path.exists(app_menu_path)
+    """Checks if the app is installed in the application menu."""
+    sys_name = platform.system()
+    if sys_name == "Windows":
+        start_menu = os.path.join(os.environ.get("APPDATA", ""), "Microsoft", "Windows", "Start Menu", "Programs")
+        shortcut_path = os.path.join(start_menu, "NumLockTray.lnk")
+        return os.path.exists(shortcut_path)
+    elif sys_name == "Linux":
+        app_menu_path = os.path.expanduser("~/.local/share/applications/numlocktray.desktop")
+        return os.path.exists(app_menu_path)
+    return False
 
 def set_app_menu(enable):
-    """Creates or removes the .desktop file in the application menu."""
-    if platform.system() != "Linux":
-        return
-        
-    if getattr(sys, 'frozen', False):
-        base_path = sys._MEIPASS
-        cmd = f'"{sys.executable}" --autostart'
-    else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        cmd = f'"{sys.executable}" "{os.path.abspath(__file__)}" --autostart'
-        
-    icon_path = os.path.join(base_path, "assets", "numlock.svg")
-    apps_dir = os.path.expanduser("~/.local/share/applications")
-    app_menu_path = os.path.join(apps_dir, "numlocktray.desktop")
+    """Creates or removes the shortcut/desktop file in the application menu."""
+    sys_name = platform.system()
     
-    try:
-        if enable:
-            os.makedirs(apps_dir, exist_ok=True)
-            desktop_entry = f"""[Desktop Entry]
+    if getattr(sys, 'frozen', False):
+        target = sys.executable
+        args = ""
+    else:
+        target = sys.executable
+        args = f'"{os.path.abspath(__file__)}"'
+        
+    if sys_name == "Windows":
+        start_menu = os.path.join(os.environ.get("APPDATA", ""), "Microsoft", "Windows", "Start Menu", "Programs")
+        shortcut_path = os.path.join(start_menu, "NumLockTray.lnk")
+        
+        try:
+            if enable:
+                # Use VBScript to create shortcut (reliable on Windows without extra libs)
+                vbs_content = f'Set oWS = WScript.CreateObject("WScript.Shell")\n' \
+                             f'sLinkFile = "{shortcut_path}"\n' \
+                             f'Set oLink = oWS.CreateShortcut(sLinkFile)\n' \
+                             f'oLink.TargetPath = "{target}"\n'
+                if args:
+                    vbs_content += f'oLink.Arguments = "{args}"\n'
+                
+                # Use the icon from assets if available
+                if getattr(sys, 'frozen', False):
+                    base_path = sys._MEIPASS
+                else:
+                    base_path = os.path.dirname(os.path.abspath(__file__))
+                ico_path = os.path.join(base_path, "assets", "numlock.ico")
+                if os.path.exists(ico_path):
+                    vbs_content += f'oLink.IconLocation = "{ico_path}"\n'
+                
+                vbs_content += 'oLink.Save'
+                
+                vbs_path = os.path.join(os.environ.get("TEMP", ""), "create_shortcut.vbs")
+                with open(vbs_path, "w", encoding="utf-16") as f: # Use UTF-16 for VBScript path safety
+                    f.write(vbs_content)
+                
+                subprocess.run(["cscript.exe", "//Nologo", vbs_path], check=True)
+                if os.path.exists(vbs_path):
+                    os.remove(vbs_path)
+            else:
+                if os.path.exists(shortcut_path):
+                    os.remove(shortcut_path)
+        except Exception as e:
+            print(f"Error setting Windows app menu: {e}")
+
+    elif sys_name == "Linux":
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+            cmd = f'"{sys.executable}" --autostart'
+        else:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            cmd = f'"{sys.executable}" "{os.path.abspath(__file__)}" --autostart'
+            
+        icon_path = os.path.join(base_path, "assets", "numlock.svg")
+        apps_dir = os.path.expanduser("~/.local/share/applications")
+        app_menu_path = os.path.join(apps_dir, "numlocktray.desktop")
+        
+        try:
+            if enable:
+                os.makedirs(apps_dir, exist_ok=True)
+                desktop_entry = f"""[Desktop Entry]
 Type=Application
 Name=NumLockTray
 Icon={icon_path}
@@ -190,13 +240,13 @@ Terminal=false
 Categories=Utility;System;Settings;
 Keywords=num;lock;tray;led;
 """
-            with open(app_menu_path, "w") as f:
-                f.write(desktop_entry)
-        else:
-            if os.path.exists(app_menu_path):
-                os.remove(app_menu_path)
-    except Exception as e:
-        print(f"Error setting Linux app menu: {e}")
+                with open(app_menu_path, "w") as f:
+                    f.write(desktop_entry)
+            else:
+                if os.path.exists(app_menu_path):
+                    os.remove(app_menu_path)
+        except Exception as e:
+            print(f"Error setting Linux app menu: {e}")
 
 def show_startup_gui():
     """Shows a simple Tkinter GUI to set the autostart preference."""
@@ -207,7 +257,7 @@ def show_startup_gui():
     
     # Center window
     window_width = 350
-    window_height = 190 if platform.system() == "Linux" else 160
+    window_height = 190
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     center_x = int(screen_width/2 - window_width / 2)
@@ -228,15 +278,13 @@ def show_startup_gui():
     cb_autostart = tk.Checkbutton(root, text="Run automatically at startup", variable=autostart_var, font=("Arial", 10))
     cb_autostart.pack(pady=5)
     
-    if platform.system() == "Linux":
-        app_menu_var = tk.BooleanVar(value=is_app_menu_installed())
-        cb_app_menu = tk.Checkbutton(root, text="Install in app menu (create shortcut)", variable=app_menu_var, font=("Arial", 10))
-        cb_app_menu.pack(pady=5)
+    app_menu_var = tk.BooleanVar(value=is_app_menu_installed())
+    cb_app_menu = tk.Checkbutton(root, text="Add to Start Menu / App Menu", variable=app_menu_var, font=("Arial", 10))
+    cb_app_menu.pack(pady=5)
     
     def on_ok():
         set_autostart(autostart_var.get())
-        if platform.system() == "Linux":
-            set_app_menu(app_menu_var.get())
+        set_app_menu(app_menu_var.get())
         root.destroy()
         
     tk.Button(root, text="OK & Start", command=on_ok, width=15, font=("Arial", 10)).pack(pady=15)
@@ -253,6 +301,7 @@ class NumLockTrayApp:
         self.running = True
         self.current_state = get_num_lock_state() or False
         self.autostart_enabled = is_autostart_enabled()
+        self.app_menu_enabled = is_app_menu_installed()
         
         # Setup tray icon
         self.icon = pystray.Icon(
@@ -272,6 +321,11 @@ class NumLockTrayApp:
                     self.toggle_autostart, 
                     checked=lambda item: self.autostart_enabled
                 ),
+                pystray.MenuItem(
+                    "Add to Start Menu", 
+                    self.toggle_app_menu, 
+                    checked=lambda item: self.app_menu_enabled
+                ),
                 pystray.MenuItem("Quit", self.quit_app)
             )
         )
@@ -279,6 +333,10 @@ class NumLockTrayApp:
     def toggle_autostart(self, icon, item):
         self.autostart_enabled = not self.autostart_enabled
         set_autostart(self.autostart_enabled)
+
+    def toggle_app_menu(self, icon, item):
+        self.app_menu_enabled = not self.app_menu_enabled
+        set_app_menu(self.app_menu_enabled)
         
     def monitor_state(self):
         while self.running:
