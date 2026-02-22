@@ -221,16 +221,16 @@ def show_startup_gui():
     except:
         pass
 
-    tk.Label(root, text="NumLock Tray Einstellungen", font=("Arial", 12, "bold")).pack(pady=15)
+    tk.Label(root, text="NumLock Tray Settings", font=("Arial", 12, "bold")).pack(pady=15)
     
     autostart_var = tk.BooleanVar(value=is_autostart_enabled())
     
-    cb_autostart = tk.Checkbutton(root, text="Beim Systemstart automatisch ausführen", variable=autostart_var, font=("Arial", 10))
+    cb_autostart = tk.Checkbutton(root, text="Run automatically at startup", variable=autostart_var, font=("Arial", 10))
     cb_autostart.pack(pady=5)
     
     if platform.system() == "Linux":
         app_menu_var = tk.BooleanVar(value=is_app_menu_installed())
-        cb_app_menu = tk.Checkbutton(root, text="Im App-Menü installieren (Starter erstellen)", variable=app_menu_var, font=("Arial", 10))
+        cb_app_menu = tk.Checkbutton(root, text="Install in app menu (create shortcut)", variable=app_menu_var, font=("Arial", 10))
         cb_app_menu.pack(pady=5)
     
     def on_ok():
@@ -239,7 +239,7 @@ def show_startup_gui():
             set_app_menu(app_menu_var.get())
         root.destroy()
         
-    tk.Button(root, text="OK & Starten", command=on_ok, width=15, font=("Arial", 10)).pack(pady=15)
+    tk.Button(root, text="OK & Start", command=on_ok, width=15, font=("Arial", 10)).pack(pady=15)
     
     # Bring window to front
     root.lift()
@@ -261,11 +261,18 @@ class NumLockTrayApp:
             f"Num Lock: {'ON' if self.current_state else 'OFF'}", 
             menu=pystray.Menu(
                 pystray.MenuItem(
-                    "Mit System starten", 
+                    lambda item: f"Status: {'ON' if self.current_state else 'OFF'}",
+                    None,
+                    enabled=False,
+                    default=True
+                ),
+                pystray.Menu.SEPARATOR,
+                pystray.MenuItem(
+                    "Start with system", 
                     self.toggle_autostart, 
                     checked=lambda item: self.autostart_enabled
                 ),
-                pystray.MenuItem("Beenden", self.quit_app)
+                pystray.MenuItem("Quit", self.quit_app)
             )
         )
         
@@ -280,6 +287,8 @@ class NumLockTrayApp:
                 self.current_state = state
                 self.icon.icon = create_icon(self.current_state)
                 self.icon.title = f"Num Lock: {'ON' if self.current_state else 'OFF'}"
+                # Force menu refresh to update the dynamic status label
+                self.icon.update_menu()
             time.sleep(0.3)
             
     def quit_app(self, icon, item):
