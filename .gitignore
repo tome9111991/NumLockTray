@@ -2,3 +2,4 @@ build/
 dist/
 GEMINI.md
 numlock_tray.spec
+__pycache__/
