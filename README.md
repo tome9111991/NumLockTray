@@ -4,23 +4,24 @@ NumLockTray is a lightweight Python application that lives in your system tray a
 
 ## Features
 
-- **Dynamic Tray Icon:** Instantly shows whether Num Lock is ON (green circle) or OFF (red circle with a cross).
+- **Dynamic Tray Icon:** Instantly shows whether Num Lock is ON (green glowing LED) or OFF (red glowing LED).
 - **Cross-Platform Support:** Works on Windows (via `ctypes`) and Linux (via `xset` or `sysfs`).
-- **Autostart Configuration:** On the first manual launch, a simple GUI helps you configure the app to start automatically with your OS.
+- **Configuration GUI:** On the first manual launch, a simple GUI helps you configure autostart and Linux desktop integration.
 - **Resource Efficient:** Low-overhead background polling (every 0.3 seconds) ensures minimal CPU impact.
 
 ## Prerequisites
 
 Ensure you have Python installed. You can install the required dependencies using the provided `requirements.txt`:
 
-```powershell
+```bash
 pip install -r requirements.txt
 ```
 
 **Dependencies:**
 - `Pillow`: For dynamic generation of the status icons.
 - `pystray`: For system tray integration.
-- `tkinter`: (Usually bundled with Python) for the autostart configuration dialog.
+- `pymupdf`: (fitz) For high-quality SVG rendering of the icons.
+- `tkinter`: (Usually bundled with Python) for the configuration dialog.
 
 ## Usage
 
@@ -46,6 +47,9 @@ python numlock_tray.py --autostart
 
 ## Technical Details
 
-The application handles autostart entries as follows:
-- **Windows:** Uses the Registry key `Software\Microsoft\Windows\CurrentVersion\Run`.
-- **Linux:** Creates a `.desktop` file in `~/.config/autostart/`.
+The application handles system integration as follows:
+- **Windows:** Uses the Registry key `Software\Microsoft\Windows\CurrentVersion\Run` for autostart.
+- **Linux:** 
+  - **Autostart:** Creates a `.desktop` file in `~/.config/autostart/`.
+  - **App Menu:** Creates a `.desktop` file in `~/.local/share/applications/` to allow launching from the application menu without a terminal.
+  - All `.desktop` files are configured with `Terminal=false` for silent background execution.

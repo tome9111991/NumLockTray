@@ -129,6 +129,7 @@ def set_autostart(enable):
                 desktop_entry = f"""[Desktop Entry]
 Type=Application
 Exec={cmd}
+Terminal=false
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
@@ -143,6 +144,45 @@ Comment=NumLock Status Tray Icon
         except Exception as e:
             print(f"Error setting Linux autostart: {e}")
 
+def is_app_menu_installed():
+    """Checks if the app is installed in the Linux application menu."""
+    if platform.system() != "Linux":
+        return False
+    app_menu_path = os.path.expanduser("~/.local/share/applications/numlocktray.desktop")
+    return os.path.exists(app_menu_path)
+
+def set_app_menu(enable):
+    """Creates or removes the .desktop file in the application menu."""
+    if platform.system() != "Linux":
+        return
+        
+    if getattr(sys, 'frozen', False):
+        cmd = f'"{sys.executable}" --autostart'
+    else:
+        cmd = f'"{sys.executable}" "{os.path.abspath(__file__)}" --autostart'
+        
+    apps_dir = os.path.expanduser("~/.local/share/applications")
+    app_menu_path = os.path.join(apps_dir, "numlocktray.desktop")
+    
+    try:
+        if enable:
+            os.makedirs(apps_dir, exist_ok=True)
+            desktop_entry = f"""[Desktop Entry]
+Type=Application
+Name=NumLockTray
+Comment=NumLock Status Tray Icon
+Exec={cmd}
+Terminal=false
+Categories=Utility;System;
+"""
+            with open(app_menu_path, "w") as f:
+                f.write(desktop_entry)
+        else:
+            if os.path.exists(app_menu_path):
+                os.remove(app_menu_path)
+    except Exception as e:
+        print(f"Error setting Linux app menu: {e}")
+
 def show_startup_gui():
     """Shows a simple Tkinter GUI to set the autostart preference."""
     import tkinter as tk
@@ -152,7 +192,7 @@ def show_startup_gui():
     
     # Center window
     window_width = 350
-    window_height = 160
+    window_height = 190 if platform.system() == "Linux" else 160
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     center_x = int(screen_width/2 - window_width / 2)
@@ -170,11 +210,18 @@ def show_startup_gui():
     
     autostart_var = tk.BooleanVar(value=is_autostart_enabled())
     
-    cb = tk.Checkbutton(root, text="Beim Systemstart automatisch ausführen", variable=autostart_var, font=("Arial", 10))
-    cb.pack(pady=5)
+    cb_autostart = tk.Checkbutton(root, text="Beim Systemstart automatisch ausführen", variable=autostart_var, font=("Arial", 10))
+    cb_autostart.pack(pady=5)
+    
+    if platform.system() == "Linux":
+        app_menu_var = tk.BooleanVar(value=is_app_menu_installed())
+        cb_app_menu = tk.Checkbutton(root, text="Im App-Menü installieren (Starter erstellen)", variable=app_menu_var, font=("Arial", 10))
+        cb_app_menu.pack(pady=5)
     
     def on_ok():
         set_autostart(autostart_var.get())
+        if platform.system() == "Linux":
+            set_app_menu(app_menu_var.get())
         root.destroy()
         
     tk.Button(root, text="OK & Starten", command=on_ok, width=15, font=("Arial", 10)).pack(pady=15)
