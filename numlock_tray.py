@@ -5,6 +5,8 @@ import time
 import os
 import sys
 import pystray
+import re
+import fitz
 from PIL import Image, ImageDraw
 
 def get_num_lock_state():
@@ -33,26 +35,47 @@ def get_num_lock_state():
     return None
 
 def create_icon(active):
-    """Creates a 64x64 dynamic icon based on the state."""
-    # Create an image with a transparent background
-    image = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    
-    # Colors: Green if active, Red if inactive
-    bg_color = (0, 200, 0, 255) if active else (200, 0, 0, 255)
-    
-    # Draw a rounded circle as the base
-    draw.ellipse((4, 4, 60, 60), fill=bg_color)
-    
-    if active:
-        # Draw a smaller white inner circle if active
-        draw.ellipse((20, 20, 44, 44), fill=(255, 255, 255, 255))
+    """Creates a 64x64 dynamic icon based on the state using the SVG asset."""
+    # Find base path for assets (handles PyInstaller bundle)
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
     else:
-        # Draw a white cross if inactive
-        draw.line((20, 20, 44, 44), fill=(255, 255, 255, 255), width=6)
-        draw.line((20, 44, 44, 20), fill=(255, 255, 255, 255), width=6)
+        base_path = os.path.dirname(os.path.abspath(__file__))
         
-    return image
+    svg_path = os.path.join(base_path, "assets", "numlock.svg")
+    
+    try:
+        with open(svg_path, "r", encoding="utf-8") as f:
+            svg_content = f.read()
+            
+        if not active:
+            # Ersetze die Farbe des leuchtenden LED-Elements durch Rot (#ff3333)
+            # Sucht gezielt nach dem fill-Wert vor filter="url(#glow)"
+            svg_content = re.sub(r'fill="([^"]+)"(?=\s+filter="url\(#glow\)")', r'fill="#ff3333"', svg_content)
+            
+        svg_doc = fitz.open("svg", svg_content.encode('utf-8'))
+        pix = svg_doc[0].get_pixmap(alpha=True)
+        image = Image.frombytes("RGBA", [pix.width, pix.height], pix.samples)
+        
+        # Scale to 64x64 for tray icon
+        image = image.resize((64, 64), Image.Resampling.LANCZOS)
+        return image
+        
+    except Exception as e:
+        print(f"Error loading SVG: {e}")
+        # Fallback to programmatic drawing
+        image = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        key_color = (0, 180, 0, 255) if active else (60, 60, 60, 255)
+        text_color = (255, 255, 255, 255) if active else (150, 150, 150, 255)
+        try:
+            draw.rounded_rectangle((4, 4, 60, 60), radius=8, fill=key_color, outline=(200, 200, 200, 255), width=2)
+        except AttributeError:
+            draw.rectangle((4, 4, 60, 60), fill=key_color, outline=(200, 200, 200, 255), width=2)
+        draw.line((24, 46, 40, 46), fill=text_color, width=6)
+        draw.line((32, 18, 32, 46), fill=text_color, width=6)
+        draw.line((22, 28, 32, 18), fill=text_color, width=6)
+        return image
 
 def is_autostart_enabled():
     """Checks if the app is configured for autostart."""

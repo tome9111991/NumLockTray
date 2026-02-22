@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="16 12 168 176" width="200" height="200">
+  <defs>
+    <!-- Farbverlauf für die Taste -->
+    <linearGradient id="keyTop" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3f404a" />
+      <stop offset="100%" stop-color="#2a2a35" />
+    </linearGradient>
+    <!-- Leuchteffekt für die LED -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Tasten-Basis (Schatten / unterer Rand) -->
+  <rect x="20" y="25" width="160" height="160" rx="24" fill="#15151a" />
+  
+  <!-- Tasten-Oberfläche -->
+  <rect x="20" y="15" width="160" height="150" rx="24" fill="url(#keyTop)" stroke="#535461" stroke-width="1.5"/>
+
+  <!-- "NUM" Text -->
+  <text x="35" y="52" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="22" fill="#a0a0b5" letter-spacing="1">NUM</text>
+
+  <!-- LED Hintergrund (ausgeschalteter Teil) -->
+  <rect x="105" y="30" width="65" height="24" rx="12" fill="#101015" />
+  <!-- Leuchtende grüne LED -->
+  <rect x="110" y="35" width="55" height="14" rx="7" fill="#00ff88" filter="url(#glow)" />
+  <rect x="110" y="35" width="55" height="14" rx="7" fill="#ffffff" opacity="0.6" />
+
+  <!-- Stilisiertes Numpad-Gitter in der Mitte -->
+  <g fill="#707085" transform="translate(68, 85)">
+    <!-- Reihe 1 -->
+    <rect x="0" y="0" width="16" height="16" rx="4" />
+    <rect x="24" y="0" width="16" height="16" rx="4" />
+    <rect x="48" y="0" width="16" height="16" rx="4" />
+    <!-- Reihe 2 -->
+    <rect x="0" y="24" width="16" height="16" rx="4" />
+    <rect x="24" y="24" width="16" height="16" rx="4" />
+    <rect x="48" y="24" width="16" height="16" rx="4" />
+    <!-- Reihe 3 -->
+    <rect x="0" y="48" width="16" height="16" rx="4" />
+    <rect x="24" y="48" width="16" height="16" rx="4" />
+    <rect x="48" y="48" width="16" height="16" rx="4" />
+  </g>
+</svg>
