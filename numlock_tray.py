@@ -123,18 +123,28 @@ def set_autostart(enable):
         autostart_dir = os.path.expanduser("~/.config/autostart")
         autostart_path = os.path.join(autostart_dir, "numlocktray.desktop")
         
+        # Find base path for assets
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+        icon_path = os.path.join(base_path, "assets", "numlock.svg")
+        
         try:
             if enable:
                 os.makedirs(autostart_dir, exist_ok=True)
                 desktop_entry = f"""[Desktop Entry]
 Type=Application
 Exec={cmd}
+Icon={icon_path}
 Terminal=false
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
 Name=NumLockTray
 Comment=NumLock Status Tray Icon
+Categories=Utility;System;
+Keywords=num;lock;tray;led;
 """
                 with open(autostart_path, "w") as f:
                     f.write(desktop_entry)
@@ -157,10 +167,13 @@ def set_app_menu(enable):
         return
         
     if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
         cmd = f'"{sys.executable}" --autostart'
     else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
         cmd = f'"{sys.executable}" "{os.path.abspath(__file__)}" --autostart'
         
+    icon_path = os.path.join(base_path, "assets", "numlock.svg")
     apps_dir = os.path.expanduser("~/.local/share/applications")
     app_menu_path = os.path.join(apps_dir, "numlocktray.desktop")
     
@@ -170,10 +183,12 @@ def set_app_menu(enable):
             desktop_entry = f"""[Desktop Entry]
 Type=Application
 Name=NumLockTray
+Icon={icon_path}
 Comment=NumLock Status Tray Icon
 Exec={cmd}
 Terminal=false
-Categories=Utility;System;
+Categories=Utility;System;Settings;
+Keywords=num;lock;tray;led;
 """
             with open(app_menu_path, "w") as f:
                 f.write(desktop_entry)
